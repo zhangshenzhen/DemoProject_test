@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+   <litepal>
+    <dbname value="cool_weather"/>
+       <version value ="1"/>
+       <list>
+           <mapping class="com.demo.test.db.Province"></mapping>
+           <mapping class="com.demo.test.db.City"></mapping>
+           <mapping class="com.demo.test.db.County"></mapping>
+       </list>
+
+
+   </litepal>
+</PreferenceScreen>

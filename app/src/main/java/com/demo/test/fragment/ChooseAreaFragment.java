@@ -1,0 +1,174 @@
+package com.demo.test.fragment;
+
+import android.app.Fragment;
+import android.app.ProgressDialog;
+import android.os.Bundle;
+import android.support.annotation.Nullable;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ListView;
+import android.widget.TextView;
+
+import com.demo.test.R;
+import com.demo.test.db.City;
+import com.demo.test.db.County;
+import com.demo.test.db.Province;
+
+import org.litepal.crud.DataSupport;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Created by lx on 2017/12/23.
+ */
+
+public class ChooseAreaFragment extends Fragment {
+    public static final int LEVEL_PROVINCE =0;
+    public static final int LEVEL_CTY =1;
+    public static final int LEVEL_COUNTY =2;
+
+    private ProgressDialog progressDialog;
+    private TextView titletext;
+    private Button backbutton;
+    private ArrayAdapter<String>  adapter;
+    private ListView listView;
+
+    private List<String>  dataList = new ArrayList<>();
+    /*
+    省列表
+    * */
+    private List<Province> provinceList;
+    /*市列表
+    * */
+    private List<City> cityList;
+    /*县列表
+    * */
+    private List<County> countyList;
+
+    /*
+    * 选中的省*/
+    private Province  selectProvince;
+      /*
+    * 选中的市*/
+      private City  selectcity;
+      /*
+    * 选中的县*/
+      private County  selectcounty;
+    /*
+    * 当前的级别*/
+    private int currentLevel;
+
+    @Nullable
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+      //填充布局
+       View view = inflater.inflate(R.layout.choose_are,container,false);
+        //查找控件
+        titletext = view.findViewById(R.id.title_text);
+        backbutton = view.findViewById(R.id.back_button);
+        listView = view.findViewById(R.id.list_view);
+        //适配器
+        adapter = new ArrayAdapter<>(getContext(),android.R.layout.simple_list_item_1,dataList);
+        return view;
+    }
+
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        //初始化
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+             if(currentLevel ==LEVEL_PROVINCE){
+                 selectProvince = provinceList.get(position);
+                 queryCitys(); //省下面查市
+             }else if(currentLevel==LEVEL_CTY){
+                 selectcity = cityList.get(position);
+                 queryCountys();//市下面查县
+              }
+            }
+        });
+        backbutton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(currentLevel ==LEVEL_COUNTY){
+                    queryCitys();
+                }else if(currentLevel==LEVEL_CTY){
+                    queryProvince();
+                }
+            }
+        });
+        queryProvince();
+    }
+
+    private void queryProvince() {
+        titletext.setText("中国");
+        backbutton.setVisibility(View.GONE);
+        provinceList = DataSupport.findAll(Province.class);
+        if(provinceList.size()>0){
+            dataList.clear();
+            for (Province province : provinceList){
+                dataList.add(province.getProvinceName());
+            }
+            adapter.notifyDataSetChanged();
+            listView.setSelection(0);
+            currentLevel = LEVEL_PROVINCE;
+        }else {
+            String  address ="http://guolin.tech.api.china";
+            queryFromServer(address ,"province");
+        }
+
+    }
+
+    private void queryCountys() {
+        titletext.setText(selectcity.getCiryName());
+        backbutton.setVisibility(View.VISIBLE);
+        countyList = DataSupport.where("cityid = ?",String.valueOf(selectcity.getId())).find(County.class
+        );
+        if(countyList.size()>0){
+           dataList.clear(); //清空集合
+            for(County county:countyList){
+                dataList.add(county.getCountyName());//往集合中添加东西
+            }
+            adapter.notifyDataSetChanged();
+            listView.setSelection(0);
+            currentLevel = LEVEL_COUNTY;
+        }else {
+            int provinceCode = selectProvince.getProvinceCode();
+            int cityCode = selectcity.getCiryCode();
+            String address = "http://guolin.tech/api/china/"+provinceCode+"/"+cityCode;
+          queryFromServer(address ,"county");
+        }
+
+    }
+
+    /*
+    * 省查询市*/
+    private void queryCitys() {
+        titletext.setText(selectProvince.getProvinceName());
+        backbutton.setVisibility(View.VISIBLE);
+        cityList = DataSupport.findAll(City.class);
+        if(cityList.size()>0){
+            dataList.clear();
+            for (City city :cityList ) {
+                dataList.add(city.getCiryName());
+            }
+             adapter.notifyDataSetChanged();//刷新
+            listView.setSelection(0);
+            currentLevel =LEVEL_CTY;
+        }else {
+           int provinceCode = selectProvince.getProvinceCode();
+            String address = "http://guolin.tech/api/china/"+provinceCode;
+            queryFromServer(address,"city");
+        }
+    }
+
+    private void queryFromServer(String address,String typle) {
+
+    }
+}
