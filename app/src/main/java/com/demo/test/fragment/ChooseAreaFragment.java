@@ -12,16 +12,24 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.demo.test.R;
 import com.demo.test.db.City;
 import com.demo.test.db.County;
 import com.demo.test.db.Province;
+import com.demo.test.util.HttpUtil;
+import com.demo.test.util.Utilty;
 
 import org.litepal.crud.DataSupport;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Response;
 
 /**
  * Created by lx on 2017/12/23.
@@ -168,7 +176,74 @@ public class ChooseAreaFragment extends Fragment {
         }
     }
 
-    private void queryFromServer(String address,String typle) {
+    /*
+    * 根据传入的地址和类型从服务器上查询省市县数据
+    * */
+    private void queryFromServer(String address, final String typle) {
+        showProgressDialog();
+        HttpUtil.sendOkhttpRequest(address, new Callback() {
 
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+           String responsetext = response.body().string();
+            boolean result = false;
+                if("province".equals(typle)){
+                    result = Utilty.handleProvinceResponse(responsetext);
+                }else if ("city".equals(typle)){
+                    result = Utilty.handleCtyResponse(responsetext,selectProvince.getId());
+                }else if("county".equals(typle)){
+                    result = Utilty.handleCountyResponse(responsetext,selectcity.getId());
+
+                }
+                if(result){
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            closeProgressDialog();
+
+                            if("province".equals(typle)){
+                                queryProvince();
+                            } else if("city".equals(typle)){
+                                queryCitys();
+                            }else if ("county".equals(typle)){
+                                queryCountys();
+                            }
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onFailure(Call call, IOException e) {
+       getActivity().runOnUiThread(new Runnable() {
+           @Override
+           public void run() {
+               closeProgressDialog();
+               Toast.makeText(getContext(),"加载失败",Toast.LENGTH_SHORT).show();
+                }
+              });
+            }
+        });
+    }
+
+    /*显示对话框
+    @  dialog.setCancelable(false);
+    @  dialog弹出后会点击屏幕或物理返回键，dialog不消失
+    @  dialog.setCanceledOnTouchOutside(false);
+    @  dialog弹出后会点击屏幕，dialog不消失；点击物理返回键dialog消失
+    * */
+    private void showProgressDialog() {
+      if(progressDialog ==null){
+          progressDialog = new ProgressDialog(getContext());
+          progressDialog.setMessage("正在加载");
+          progressDialog.setCanceledOnTouchOutside(false);
+      }
+    }
+    /*关闭对话框
+    * */
+    private void closeProgressDialog() {
+        if (progressDialog != null){
+            progressDialog.dismiss();
+        }
     }
 }
